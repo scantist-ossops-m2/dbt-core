@@ -126,6 +126,8 @@ class TestRunner(CompileRunner):
     def execute_data_test(self, data_test: TestNode, manifest: Manifest) -> TestResultData:
         context = generate_runtime_model_context(data_test, self.config, manifest)
 
+        hook_ctx = self.adapter.pre_model_hook(context)
+
         materialization_macro = manifest.find_materialization_macro_by_name(
             self.config.project_name, data_test.get_materialization(), self.adapter.type()
         )
@@ -140,10 +142,13 @@ class TestRunner(CompileRunner):
                 "Invalid materialization context generated, missing config: {}".format(context)
             )
 
-        # generate materialization macro
-        macro_func = MacroGenerator(materialization_macro, context)
-        # execute materialization macro
-        macro_func()
+        try:
+            # generate materialization macro
+            macro_func = MacroGenerator(materialization_macro, context)
+            # execute materialization macro
+            macro_func()
+        finally:
+            self.adapter.post_model_hook(context, hook_ctx)
         # load results from context
         # could eventually be returned directly by materialization
         result = context["load_result"]("main")
@@ -198,6 +203,8 @@ class TestRunner(CompileRunner):
         # materialization, not compile the node.compiled_code
         context = generate_runtime_model_context(unit_test_node, self.config, unit_test_manifest)
 
+        hook_ctx = self.adapter.pre_model_hook(context)
+
         materialization_macro = unit_test_manifest.find_materialization_macro_by_name(
             self.config.project_name, unit_test_node.get_materialization(), self.adapter.type()
         )
@@ -213,16 +220,18 @@ class TestRunner(CompileRunner):
                 "Invalid materialization context generated, missing config: {}".format(context)
             )
 
-        # generate materialization macro
-        macro_func = MacroGenerator(materialization_macro, context)
-        # execute materialization macro
         try:
+            # generate materialization macro
+            macro_func = MacroGenerator(materialization_macro, context)
+            # execute materialization macro
             macro_func()
         except DbtBaseException as e:
             raise DbtRuntimeError(
                 f"An error occurred during execution of unit test '{unit_test_def.name}'. "
                 f"There may be an error in the unit test definition: check the data types.\n {e}"
             )
+        finally:
+            self.adapter.post_model_hook(context, hook_ctx)
 
         # load results from context
         # could eventually be returned directly by materialization
