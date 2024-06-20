@@ -133,7 +133,7 @@ def clone_and_checkout(
         )
     except CommandResultError as exc:
         err = exc.stderr
-        exists = re.match("fatal: destination path '(.+)' already exists", err)
+        exists = re.match("fatal: destination path '(.+)' already exists - TESTING", err)
         if not exists:
             raise UnknownGitCloningProblemError(repo)
 
