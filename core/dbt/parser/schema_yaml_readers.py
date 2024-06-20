@@ -6,11 +6,13 @@ from dbt_semantic_interfaces.type_enums import (
     DimensionType,
     EntityType,
     MetricType,
+    PeriodAggregation,
     TimeGranularity,
 )
 
 from dbt.artifacts.resources import (
     ConversionTypeParams,
+    CumulativeTypeParams,
     Dimension,
     DimensionTypeParams,
     Entity,
@@ -42,6 +44,7 @@ from dbt.context.providers import (
 from dbt.contracts.graph.nodes import Exposure, Group, Metric, SavedQuery, SemanticModel
 from dbt.contracts.graph.unparsed import (
     UnparsedConversionTypeParams,
+    UnparsedCumulativeTypeParams,
     UnparsedDimension,
     UnparsedDimensionTypeParams,
     UnparsedEntity,
@@ -221,9 +224,19 @@ class MetricParser(YamlReader):
 
         return input_measures
 
-    def _get_time_window(
-        self,
-        unparsed_window: Optional[str],
+    def _get_period_agg(self, unparsed_period_agg: str) -> Optional[PeriodAggregation]:
+        return PeriodAggregation(unparsed_period_agg)
+
+    def _get_optional_grain_to_date(
+        self, unparsed_grain_to_date: Optional[str]
+    ) -> Optional[TimeGranularity]:
+        if not unparsed_grain_to_date:
+            return None
+
+        return TimeGranularity(unparsed_grain_to_date)
+
+    def _get_optional_time_window(
+        self, unparsed_window: Optional[str]
     ) -> Optional[MetricTimeWindow]:
         if unparsed_window is not None:
             parts = unparsed_window.split(" ")
@@ -277,7 +290,7 @@ class MetricParser(YamlReader):
                 name=unparsed.name,
                 filter=parse_where_filter(unparsed.filter),
                 alias=unparsed.alias,
-                offset_window=self._get_time_window(unparsed.offset_window),
+                offset_window=self._get_optional_time_window(unparsed.offset_window),
                 offset_to_grain=offset_to_grain,
             )
 
@@ -311,8 +324,19 @@ class MetricParser(YamlReader):
             conversion_measure=self._get_input_measure(unparsed.conversion_measure),
             entity=unparsed.entity,
             calculation=ConversionCalculationType(unparsed.calculation),
-            window=self._get_time_window(unparsed.window),
+            window=self._get_optional_time_window(unparsed.window),
             constant_properties=unparsed.constant_properties,
+        )
+
+    def _get_optional_cumulative_type_params(
+        self, unparsed: Optional[UnparsedCumulativeTypeParams]
+    ) -> Optional[CumulativeTypeParams]:
+        if unparsed is None:
+            return None
+        return CumulativeTypeParams(
+            window=self._get_optional_time_window(unparsed.window),
+            grain_to_date=self._get_optional_grain_to_date(unparsed.grain_to_date),
+            period_agg=self._get_period_agg(unparsed.period_agg),
         )
 
     def _get_metric_type_params(self, type_params: UnparsedMetricTypeParams) -> MetricTypeParams:
@@ -325,12 +349,15 @@ class MetricParser(YamlReader):
             numerator=self._get_optional_metric_input(type_params.numerator),
             denominator=self._get_optional_metric_input(type_params.denominator),
             expr=str(type_params.expr) if type_params.expr is not None else None,
-            window=self._get_time_window(type_params.window),
+            window=self._get_optional_time_window(type_params.window),
             grain_to_date=grain_to_date,
             metrics=self._get_metric_inputs(type_params.metrics),
             conversion_type_params=self._get_optional_conversion_type_params(
                 type_params.conversion_type_params
-            )
+            ),
+            cumulative_type_params=self._get_optional_cumulative_type_params(
+                type_params.cumulative_type_params
+            ),
             # input measures are calculated via metric processing post parsing
             # input_measures=?,
         )
