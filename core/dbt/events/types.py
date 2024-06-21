@@ -1621,7 +1621,7 @@ class SnapshotTimestampWarning(WarnLevel):
     def message(self) -> str:
         return (
             f"Data type of snapshot table timestamp columns ({self.snapshot_time_data_type} "
-            f"doesn't match derived column 'updated_at' ({self.dbt_updated_at_data_type}). "
+            f"doesn't match derived column 'updated_at' ({self.updated_at_data_type}). "
             "Please update snapshot config 'updated_at'."
         )
 

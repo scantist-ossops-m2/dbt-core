@@ -1613,7 +1613,7 @@ message CompiledNodeMsg {
 // Q043
 message SnapshotTimestampWarning {
     string snapshot_time_data_type = 1;
-    string dbt_updated_at_data_type = 2;
+    string updated_at_data_type = 2;
 }
 
 message SnapshotTimestampWarningMsg {

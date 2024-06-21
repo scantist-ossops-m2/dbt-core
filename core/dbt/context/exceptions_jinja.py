@@ -116,7 +116,9 @@ def raise_fail_fast_error(msg, node=None) -> NoReturn:
     raise FailFastError(msg, node=node)
 
 
-def warn_snapshot_timestamp_data_types(snapshot_time_data_type: str, dbt_updated_at_data_type: str) -> NoReturn:
+def warn_snapshot_timestamp_data_types(
+    snapshot_time_data_type: str, dbt_updated_at_data_type: str
+) -> None:
     warn_or_error(SnapshotTimestampWarning(snapshot_time_data_type, dbt_updated_at_data_type))
 
 
