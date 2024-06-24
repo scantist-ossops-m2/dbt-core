@@ -117,9 +117,14 @@ def raise_fail_fast_error(msg, node=None) -> NoReturn:
 
 
 def warn_snapshot_timestamp_data_types(
-    snapshot_time_data_type: str, dbt_updated_at_data_type: str
+    snapshot_time_data_type: str, updated_at_data_type: str
 ) -> None:
-    warn_or_error(SnapshotTimestampWarning(snapshot_time_data_type, dbt_updated_at_data_type))
+    warn_or_error(
+        SnapshotTimestampWarning(
+            snapshot_time_data_type=snapshot_time_data_type,
+            updated_at_data_type=updated_at_data_type,
+        )
+    )
 
 
 # Update this when a new function should be added to the

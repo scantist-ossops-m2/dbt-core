@@ -1,6 +1,6 @@
 import pytest
 
-from dbt.tests.util import run_dbt
+from dbt.tests.util import run_dbt, run_dbt_and_capture
 
 create_source_sql = """
 create table {database}.{schema}.source_users (
@@ -10,7 +10,7 @@ create table {database}.{schema}.source_users (
     email VARCHAR(50),
     gender VARCHAR(50),
     ip_address VARCHAR(20),
-    updated_time TIMESTAMP WITHOUT TIME ZONE
+    updated_time TIMESTAMP WITH TIME ZONE
 );
 insert into {database}.{schema}.source_users (id, first_name, last_name, email, gender, ip_address, updated_time) values
 (1, 'Judith', 'Kennedy', '(not provided)', 'Female', '54.60.24.128', '2015-12-24 12:19:28'),
@@ -30,7 +30,7 @@ select * from {{ ref('users') }}
 {% endsnapshot %}
 """
 
-snapshot_schema_yml = """
+source_schema_yml = """
 sources:
   - name: test_source
     loader: custom
@@ -38,7 +38,9 @@ sources:
     tables:
       - name: source_users
         loaded_at_field: updated_time
+"""
 
+snapshot_schema_yml = """
 snapshots:
   - name: users_snapshot
     config:
@@ -54,7 +56,8 @@ class TestSnapshotConfig:
     def models(self):
         return {
             "users.sql": model_users_sql,
-            "schema.yml": snapshot_schema_yml,
+            "source_schema.yml": source_schema_yml,
+            "snapshot_schema.yml": snapshot_schema_yml,
         }
 
     @pytest.fixture(scope="class")
@@ -64,5 +67,6 @@ class TestSnapshotConfig:
     def test_timestamp_snapshot(self, project):
         project.run_sql(create_source_sql)
         run_dbt(["run"])
-        results = run_dbt(["snapshot"])
+        results, log_output = run_dbt_and_capture(["snapshot"])
         assert len(results) == 1
+        assert "Please update snapshot config" in log_output
