@@ -375,7 +375,6 @@ class UnitTestParser(YamlReader):
             ut_fixture.rows = [
                 {k: (None if v == "" else v) for k, v in row.items()} for row in csv_rows
             ]
-            breakpoint()
 
         elif ut_fixture.format == UnitTestFormat.SQL:
             if not (isinstance(ut_fixture.rows, str) or isinstance(ut_fixture.fixture, str)):
@@ -388,6 +387,7 @@ class UnitTestParser(YamlReader):
                 ut_fixture.rows = self.get_fixture_file_rows(
                     ut_fixture.fixture, self.project.project_name, unit_test_definition.unique_id
                 )
+        breakpoint()
 
     def get_fixture_file_rows(self, fixture_name, project_name, utdef_unique_id):
         # find fixture file object and store unit_test_definition unique_id
