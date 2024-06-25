@@ -744,6 +744,34 @@ semantic_models:
 
 """
 
+cumulative_metric_yml = """
+version: 2
+metrics:
+    - name: weekly_visits
+      label: Rolling sum of visits over the last 7 days
+      type: cumulative
+      type_params:
+        measure: num_visits
+        cumulative_type_params:
+          window: 7 days
+          period_agg: average
+    - name: cumulative_orders
+      label: Rolling total of orders (all time)
+      type: cumulative
+      type_params:
+        measure: num_orders
+        cumulative_type_params:
+          period_agg: last
+    - name: orders_ytd
+      label: Total orders since the start of the year
+      type: cumulative
+      type_params:
+        measure: num_orders
+        cumulative_type_params:
+          grain_to_date: year
+          period_agg: first
+"""
+
 conversion_metric_yml = """
 version: 2
 metrics:
