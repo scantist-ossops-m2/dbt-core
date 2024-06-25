@@ -1,30 +1,37 @@
+import copy
 import threading
-from typing import Any, Optional, Iterable, Tuple, Sequence, Dict
-import agate
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any, Dict, Iterable, Optional, Sequence, Tuple
 
+# https://github.com/dbt-labs/dbt-core/issues/10098
+# Needed for Mashumaro serialization of RunResult below
+# TODO: investigate alternative approaches to restore conditional import
+# if TYPE_CHECKING:
+import agate
 
-from dbt.contracts.graph.nodes import CompiledNode
+from dbt.artifacts.resources import CompiledResource
 from dbt.artifacts.schemas.base import (
-    BaseArtifactMetadata,
     ArtifactMixin,
-    schema_version,
+    BaseArtifactMetadata,
     get_artifact_schema_version,
+    schema_version,
 )
 from dbt.artifacts.schemas.results import (
     BaseResult,
-    NodeResult,
-    RunStatus,
-    ResultNode,
     ExecutionResult,
+    NodeResult,
+    ResultNode,
+    RunStatus,
 )
+from dbt.exceptions import scrub_secrets
 from dbt_common.clients.system import write_json
+from dbt_common.constants import SECRET_ENV_PREFIX
 
 
 @dataclass
 class RunResult(NodeResult):
-    agate_table: Optional[agate.Table] = field(
+    agate_table: Optional["agate.Table"] = field(
         default=None, metadata={"serialize": lambda x: None, "deserialize": lambda x: None}
     )
 
@@ -64,7 +71,7 @@ class RunResultOutput(BaseResult):
 
 def process_run_result(result: RunResult) -> RunResultOutput:
 
-    compiled = isinstance(result.node, CompiledNode)
+    compiled = isinstance(result.node, CompiledResource)
 
     return RunResultOutput(
         unique_id=result.node.unique_id,
@@ -120,7 +127,26 @@ class RunResultsArtifact(ExecutionResult, ArtifactMixin):
             dbt_schema_version=str(cls.dbt_schema_version),
             generated_at=generated_at,
         )
-        return cls(metadata=meta, results=processed_results, elapsed_time=elapsed_time, args=args)
+
+        secret_vars = [
+            v for k, v in args["vars"].items() if k.startswith(SECRET_ENV_PREFIX) and v.strip()
+        ]
+
+        scrubbed_args = copy.deepcopy(args)
+
+        # scrub secrets in invocation command
+        scrubbed_args["invocation_command"] = scrub_secrets(
+            scrubbed_args["invocation_command"], secret_vars
+        )
+
+        # scrub secrets in vars dict
+        scrubbed_args["vars"] = {
+            k: scrub_secrets(v, secret_vars) for k, v in scrubbed_args["vars"].items()
+        }
+
+        return cls(
+            metadata=meta, results=processed_results, elapsed_time=elapsed_time, args=scrubbed_args
+        )
 
     @classmethod
     def compatible_previous_versions(cls) -> Iterable[Tuple[str, int]]:

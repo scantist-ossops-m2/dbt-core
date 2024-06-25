@@ -1,20 +1,10 @@
-import pytest
-import os
 import json
+import os
 
 from dbt.tests.util import run_dbt
-from dbt.logger import log_manager
-
-from tests.functional.list.fixtures import (  # noqa: F401
-    snapshots,
-    tests,
-    models,
-    macros,
-    seeds,
-    analyses,
-    semantic_models,
-    metrics,
-    project_files,
+from tests.functional.fixtures.happy_path_fixture import (  # noqa: F401
+    happy_path_project,
+    happy_path_project_files,
 )
 
 
@@ -22,29 +12,19 @@ class TestList:
     def dir(self, value):
         return os.path.normpath(value)
 
-    @pytest.fixture(scope="class")
-    def project_config_update(self):
-        return {
-            "config-version": 2,
-            "analysis-paths": [self.dir("analyses")],
-            "snapshot-paths": [self.dir("snapshots")],
-            "macro-paths": [self.dir("macros")],
-            "seed-paths": [self.dir("seeds")],
-            "test-paths": [self.dir("tests")],
-            "seeds": {
-                "quote_columns": False,
-            },
-        }
+    def test_packages_install_path_does_not_exist(self, happy_path_project):  # noqa: F811
+        run_dbt(["list"])
+        packages_install_path = "dbt_packages"
+
+        # the packages-install-path should not be created by `dbt list`
+        assert not os.path.exists(packages_install_path)
 
     def run_dbt_ls(self, args=None, expect_pass=True):
-        log_manager.stdout_console()
         full_args = ["ls"]
         if args is not None:
             full_args += args
-
         result = run_dbt(args=full_args, expect_pass=expect_pass)
 
-        log_manager.stdout_console()
         return result
 
     def assert_json_equal(self, json_str, expected):
@@ -62,7 +42,7 @@ class TestList:
                 else:
                     assert got == expected
 
-    def expect_snapshot_output(self, project):
+    def expect_snapshot_output(self, happy_path_project):  # noqa: F811
         expectations = {
             "name": "my_snapshot",
             "selector": "test.snapshot.my_snapshot",
@@ -81,8 +61,8 @@ class TestList:
                     "quoting": {},
                     "column_types": {},
                     "persist_docs": {},
-                    "target_database": project.database,
-                    "target_schema": project.test_schema,
+                    "target_database": happy_path_project.database,
+                    "target_schema": happy_path_project.test_schema,
                     "unique_key": "id",
                     "strategy": "timestamp",
                     "updated_at": "updated_at",
@@ -596,6 +576,7 @@ class TestList:
             "test.t",
             "semantic_model:test.my_sm",
             "metric:test.total_outer",
+            "saved_query:test.my_saved_query",
         }
         # analyses have their type inserted into their fqn like tests
         expected_all = expected_default | {"test.analysis.a"}
@@ -625,6 +606,9 @@ class TestList:
 
         results = self.run_dbt_ls(["--resource-type", "metric"])
         assert set(results) == {"metric:test.total_outer"}
+
+        results = self.run_dbt_ls(["--resource-type", "saved_query"])
+        assert set(results) == {"saved_query:test.my_saved_query"}
 
         results = self.run_dbt_ls(["--resource-type", "model", "--select", "outer+"])
         assert set(results) == {"test.outer", "test.sub.inner"}
@@ -698,10 +682,42 @@ class TestList:
             "test.outer",
         }
 
-    def expect_selected_keys(self, project):
+    def expect_resource_type_env_var(self):
+        """Expect selected resources when --resource-type given multiple times"""
+        os.environ["DBT_RESOURCE_TYPES"] = "test model"
+        results = self.run_dbt_ls()
+        assert set(results) == {
+            "test.ephemeral",
+            "test.incremental",
+            "test.not_null_outer_id",
+            "test.outer",
+            "test.sub.inner",
+            "test.metricflow_time_spine",
+            "test.t",
+            "test.unique_outer_id",
+        }
+        del os.environ["DBT_RESOURCE_TYPES"]
+        os.environ[
+            "DBT_EXCLUDE_RESOURCE_TYPES"
+        ] = "test saved_query metric source semantic_model snapshot seed"
+        results = self.run_dbt_ls()
+        assert set(results) == {
+            "test.ephemeral",
+            "test.incremental",
+            "test.outer",
+            "test.sub.inner",
+            "test.metricflow_time_spine",
+        }
+        del os.environ["DBT_EXCLUDE_RESOURCE_TYPES"]
+
+    def expect_selected_keys(self, happy_path_project):  # noqa: F811
         """Expect selected fields of the the selected model"""
         expectations = [
-            {"database": project.database, "schema": project.test_schema, "alias": "inner"}
+            {
+                "database": happy_path_project.database,
+                "schema": happy_path_project.test_schema,
+                "alias": "inner",
+            }
         ]
         results = self.run_dbt_ls(
             [
@@ -722,7 +738,9 @@ class TestList:
 
         """Expect selected fields when --output-keys given multiple times
         """
-        expectations = [{"database": project.database, "schema": project.test_schema}]
+        expectations = [
+            {"database": happy_path_project.database, "schema": happy_path_project.test_schema}
+        ]
         results = self.run_dbt_ls(
             [
                 "--model",
@@ -784,8 +802,8 @@ class TestList:
         for got, expected in zip(results, expectations):
             self.assert_json_equal(got, expected)
 
-    def test_ls(self, project):
-        self.expect_snapshot_output(project)
+    def test_ls(self, happy_path_project):  # noqa: F811
+        self.expect_snapshot_output(happy_path_project)
         self.expect_analyses_output()
         self.expect_model_output()
         self.expect_source_output()
@@ -793,8 +811,9 @@ class TestList:
         self.expect_test_output()
         self.expect_select()
         self.expect_resource_type_multiple()
+        self.expect_resource_type_env_var()
         self.expect_all_output()
-        self.expect_selected_keys(project)
+        self.expect_selected_keys(happy_path_project)
 
 
 def normalize(path):

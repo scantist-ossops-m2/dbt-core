@@ -1,24 +1,20 @@
 import os
 from copy import deepcopy
-from typing import MutableMapping, Dict, List, Callable
+from typing import Callable, Dict, List, MutableMapping
 
-from dbt.contracts.graph.manifest import Manifest
+from dbt.constants import DEFAULT_ENV_PLACEHOLDER
 from dbt.contracts.files import (
     AnySourceFile,
     ParseFileType,
-    parse_file_type_to_parser,
     SchemaSourceFile,
+    parse_file_type_to_parser,
 )
-from dbt_common.context import get_invocation_context
-from dbt_common.events.functions import fire_event
-from dbt_common.events.base_types import EventLevel
-from dbt.events.types import (
-    PartialParsingEnabled,
-    PartialParsingFile,
-)
-from dbt.constants import DEFAULT_ENV_PLACEHOLDER
+from dbt.contracts.graph.manifest import Manifest
+from dbt.events.types import PartialParsingEnabled, PartialParsingFile
 from dbt.node_types import NodeType
-
+from dbt_common.context import get_invocation_context
+from dbt_common.events.base_types import EventLevel
+from dbt_common.events.functions import fire_event
 
 mssat_files = (
     ParseFileType.Model,
@@ -211,6 +207,7 @@ class PartialParsing:
         if (
             file_id not in self.project_parser_files[project_name][parser_name]
             and file_id not in self.file_diff["deleted"]
+            and file_id not in self.file_diff["deleted_schema_files"]
         ):
             self.project_parser_files[project_name][parser_name].append(file_id)
 
@@ -467,7 +464,11 @@ class PartialParsing:
 
     def _schedule_for_parsing(self, dict_key: str, element, name, delete: Callable) -> None:
         file_id = element.file_id
-        if file_id in self.saved_files and file_id not in self.file_diff["deleted"]:
+        if (
+            file_id in self.saved_files
+            and file_id not in self.file_diff["deleted"]
+            and file_id not in self.file_diff["deleted_schema_files"]
+        ):
             schema_file = self.saved_files[file_id]
             elements = []
             assert isinstance(schema_file, SchemaSourceFile)

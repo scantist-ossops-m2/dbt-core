@@ -3,33 +3,32 @@ import pytest
 from dbt.cli.main import dbtRunner
 from dbt.contracts.graph.manifest import Manifest
 from dbt.exceptions import ParsingError
-from dbt.tests.util import run_dbt, get_manifest
-
-
+from dbt.tests.util import get_manifest, run_dbt
 from tests.functional.metrics.fixtures import (
-    conversion_semantic_model_purchasing_yml,
+    basic_metrics_yml,
     conversion_metric_yml,
-    mock_purchase_data_csv,
-    models_people_sql,
-    models_people_metrics_yml,
-    invalid_models_people_metrics_yml,
-    invalid_metrics_missing_model_yml,
-    invalid_metrics_missing_expression_yml,
-    names_with_spaces_metrics_yml,
-    names_with_special_chars_metrics_yml,
-    names_with_leading_numeric_metrics_yml,
-    long_name_metrics_yml,
-    downstream_model_sql,
-    invalid_derived_metric_contains_model_yml,
+    conversion_semantic_model_purchasing_yml,
     derived_metric_yml,
+    downstream_model_sql,
+    duplicate_measure_metric_yml,
+    filtered_metrics_yml,
+    invalid_derived_metric_contains_model_yml,
     invalid_metric_without_timestamp_with_time_grains_yml,
     invalid_metric_without_timestamp_with_window_yml,
+    invalid_metrics_missing_expression_yml,
+    invalid_metrics_missing_model_yml,
+    invalid_models_people_metrics_yml,
+    long_name_metrics_yml,
     metricflow_time_spine_sql,
+    mock_purchase_data_csv,
+    models_people_metrics_yml,
+    models_people_sql,
+    names_with_leading_numeric_metrics_yml,
+    names_with_spaces_metrics_yml,
+    names_with_special_chars_metrics_yml,
+    purchasing_model_sql,
     semantic_model_people_yml,
     semantic_model_purchasing_yml,
-    purchasing_model_sql,
-    filtered_metrics_yml,
-    basic_metrics_yml,
 )
 
 
@@ -78,7 +77,7 @@ class TestSimpleMetrics:
                     "metric.test.average_tenure_minus_people"
                 ].type_params.input_measures
             )
-            == 3
+            == 2
         )
 
 
@@ -414,8 +413,8 @@ class TestFilterParsing:
             "people.sql": models_people_sql,
         }
 
-    # Tests that filters are parsed to their appropriate type
-    def test_string_filter_parsing(
+    # Tests that filters are parsed to their appropriate types
+    def test_filter_parsing(
         self,
         project,
     ):
@@ -435,19 +434,56 @@ class TestFilterParsing:
         )
         assert len(filters1) == 1
         assert filters1[0].where_sql_template == "{{ Dimension('id__loves_dbt') }} is true"
-
-        # Test metrics with metric-level filters.
-        filters2 = manifest.metrics[
-            "metric.test.collective_tenure_metric_filter_str"
-        ].filter.where_filters
+        filters2 = (
+            manifest.metrics["metric.test.collective_tenure_measure_filter_list"]
+            .input_measures[0]
+            .filter.where_filters
+        )
         assert len(filters2) == 1
         assert filters2[0].where_sql_template == "{{ Dimension('id__loves_dbt') }} is true"
 
+        # Test metrics with metric-level filters.
+        filters3 = manifest.metrics[
+            "metric.test.collective_tenure_metric_filter_str"
+        ].filter.where_filters
+        assert len(filters3) == 1
+        assert filters3[0].where_sql_template == "{{ Dimension('id__loves_dbt') }} is true"
+        filters4 = manifest.metrics[
+            "metric.test.collective_tenure_metric_filter_list"
+        ].filter.where_filters
+        assert len(filters4) == 1
+        assert filters4[0].where_sql_template == "{{ Dimension('id__loves_dbt') }} is true"
+
         # Test derived metrics with input metric filters.
-        filters3 = (
+        filters5 = (
             manifest.metrics["metric.test.average_tenure_filter_str"]
             .input_metrics[0]
             .filter.where_filters
         )
-        assert len(filters3) == 1
-        assert filters3[0].where_sql_template == "{{ Dimension('id__loves_dbt') }} is true"
+        assert len(filters5) == 1
+        assert filters5[0].where_sql_template == "{{ Dimension('id__loves_dbt') }} is true"
+        filters6 = (
+            manifest.metrics["metric.test.average_tenure_filter_list"]
+            .input_metrics[0]
+            .filter.where_filters
+        )
+        assert len(filters6) == 1
+        assert filters6[0].where_sql_template == "{{ Dimension('id__loves_dbt') }} is true"
+
+
+class TestDuplicateInputMeasures:
+    @pytest.fixture(scope="class")
+    def models(self):
+        return {
+            "basic_metrics.yml": basic_metrics_yml,
+            "filtered_metrics.yml": duplicate_measure_metric_yml,
+            "metricflow_time_spine.sql": metricflow_time_spine_sql,
+            "semantic_model_people.yml": semantic_model_people_yml,
+            "people.sql": models_people_sql,
+        }
+
+    def test_duplicate_input_measures(self, project):
+        runner = dbtRunner()
+        result = runner.invoke(["parse"])
+        assert result.success
+        assert isinstance(result.result, Manifest)
