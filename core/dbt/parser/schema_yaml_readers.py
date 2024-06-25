@@ -224,7 +224,7 @@ class MetricParser(YamlReader):
 
         return input_measures
 
-    def _get_period_agg(self, unparsed_period_agg: str) -> Optional[PeriodAggregation]:
+    def _get_period_agg(self, unparsed_period_agg: str) -> PeriodAggregation:
         return PeriodAggregation(unparsed_period_agg)
 
     def _get_optional_grain_to_date(
