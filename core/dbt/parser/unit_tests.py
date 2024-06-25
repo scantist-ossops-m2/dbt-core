@@ -366,6 +366,8 @@ class UnitTestParser(YamlReader):
             else:
                 ut_fixture.rows = self._convert_csv_to_list_of_dicts(ut_fixture.rows)
 
+            breakpoint()
+
     def _convert_csv_to_list_of_dicts(self, csv_string: str) -> List[Dict[str, Any]]:
         dummy_file = StringIO(csv_string)
         reader = csv.DictReader(dummy_file)
