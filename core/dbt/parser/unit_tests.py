@@ -390,7 +390,9 @@ class UnitTestParser(YamlReader):
 
         # Some databases like redshift will default the type of a column
         # where the first value is None to a type like VARCHAR(1)
-        if ut_fixture.rows:
+        if ut_fixture.rows and (
+            ut_fixture.format == UnitTestFormat.Dict or ut_fixture.format == UnitTestFormat.CSV
+        ):
             ut_fixture.rows.sort(key=lambda item: tuple(value is None for value in item.values()))
             first_row = ut_fixture.rows[0]
             if any(value is None for value in first_row.values()):
