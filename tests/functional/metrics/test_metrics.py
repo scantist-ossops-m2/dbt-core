@@ -440,6 +440,20 @@ class TestCumulativeMetric:
             "metric.test.orders_ytd": CumulativeTypeParams(
                 grain_to_date=TimeGranularity.YEAR, period_agg=PeriodAggregation.FIRST
             ),
+            "metric.test.monthly_orders": CumulativeTypeParams(
+                window=MetricTimeWindow(count=1, granularity=TimeGranularity.MONTH),
+                period_agg=PeriodAggregation.AVERAGE,
+            ),
+            "metric.test.yearly_orders": CumulativeTypeParams(
+                window=MetricTimeWindow(count=1, granularity=TimeGranularity.YEAR),
+                period_agg=PeriodAggregation.FIRST,
+            ),
+            "metric.test.visits_mtd": CumulativeTypeParams(
+                grain_to_date=TimeGranularity.MONTH, period_agg=PeriodAggregation.FIRST
+            ),
+            "metric.test.cumulative_visits": CumulativeTypeParams(
+                period_agg=PeriodAggregation.FIRST
+            ),
         }
         assert metric_ids == set(expected_metric_ids_to_cumulative_type_params.keys())
         for (
@@ -449,7 +463,7 @@ class TestCumulativeMetric:
             assert (
                 manifest.metrics[metric_id].type_params.cumulative_type_params
                 == expected_cumulative_type_params
-            )
+            ), f"Found unexpected cumulative type params for {metric_id}"
 
 
 class TestFilterParsing:

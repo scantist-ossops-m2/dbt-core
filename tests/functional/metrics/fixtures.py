@@ -770,6 +770,31 @@ metrics:
         cumulative_type_params:
           grain_to_date: year
           period_agg: first
+    - name: monthly_orders
+      label: Orders in the past month
+      type: cumulative
+      type_params:
+        measure: num_orders
+        window: 1 month
+        cumulative_type_params:
+          period_agg: average
+    - name: yearly_orders
+      label: Orders in the past year
+      type: cumulative
+      type_params:
+        measure: num_orders
+        window: 1 year
+    - name: visits_mtd
+      label: Visits since start of month
+      type: cumulative
+      type_params:
+        measure: num_visits
+        grain_to_date: month
+    - name: cumulative_visits
+      label: Rolling total of visits (all time)
+      type: cumulative
+      type_params:
+        measure: num_visits
 """
 
 conversion_metric_yml = """
