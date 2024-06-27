@@ -329,17 +329,43 @@ class MetricParser(YamlReader):
         )
 
     def _get_optional_cumulative_type_params(
-        self, unparsed: Optional[UnparsedCumulativeTypeParams]
+        self, unparsed_metric: UnparsedMetric
     ) -> Optional[CumulativeTypeParams]:
-        if unparsed is None:
-            return None
-        return CumulativeTypeParams(
-            window=self._get_optional_time_window(unparsed.window),
-            grain_to_date=self._get_optional_grain_to_date(unparsed.grain_to_date),
-            period_agg=self._get_period_agg(unparsed.period_agg),
-        )
+        unparsed_type_params = unparsed_metric.type_params
+        if unparsed_metric.type.lower() == MetricType.CUMULATIVE.value:
+            if not unparsed_type_params.cumulative_type_params:
+                unparsed_type_params.cumulative_type_params = UnparsedCumulativeTypeParams()
 
-    def _get_metric_type_params(self, type_params: UnparsedMetricTypeParams) -> MetricTypeParams:
+            if (
+                unparsed_type_params.window
+                and not unparsed_type_params.cumulative_type_params.window
+            ):
+                unparsed_type_params.cumulative_type_params.window = unparsed_type_params.window
+            if (
+                unparsed_type_params.grain_to_date
+                and not unparsed_type_params.cumulative_type_params.grain_to_date
+            ):
+                unparsed_type_params.cumulative_type_params.grain_to_date = (
+                    unparsed_type_params.grain_to_date
+                )
+
+            return CumulativeTypeParams(
+                window=self._get_optional_time_window(
+                    unparsed_type_params.cumulative_type_params.window
+                ),
+                grain_to_date=self._get_optional_grain_to_date(
+                    unparsed_type_params.cumulative_type_params.grain_to_date
+                ),
+                period_agg=self._get_period_agg(
+                    unparsed_type_params.cumulative_type_params.period_agg
+                ),
+            )
+
+        return None
+
+    def _get_metric_type_params(self, unparsed_metric: UnparsedMetric) -> MetricTypeParams:
+        type_params = unparsed_metric.type_params
+
         grain_to_date: Optional[TimeGranularity] = None
         if type_params.grain_to_date is not None:
             grain_to_date = TimeGranularity(type_params.grain_to_date)
@@ -356,7 +382,7 @@ class MetricParser(YamlReader):
                 type_params.conversion_type_params
             ),
             cumulative_type_params=self._get_optional_cumulative_type_params(
-                type_params.cumulative_type_params
+                unparsed_metric=unparsed_metric,
             ),
             # input measures are calculated via metric processing post parsing
             # input_measures=?,
@@ -407,7 +433,7 @@ class MetricParser(YamlReader):
             description=unparsed.description,
             label=unparsed.label,
             type=MetricType(unparsed.type),
-            type_params=self._get_metric_type_params(unparsed.type_params),
+            type_params=self._get_metric_type_params(unparsed),
             filter=parse_where_filter(unparsed.filter),
             meta=unparsed.meta,
             tags=unparsed.tags,
