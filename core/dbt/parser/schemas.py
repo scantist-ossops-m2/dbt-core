@@ -788,7 +788,7 @@ class ModelPatchParser(NodePatchParser[UnparsedModelUpdate]):
                     versioned_model_name, target.package_name, None
                 )
 
-                versioned_model_node: ModelNode
+                versioned_model_node: Optional[ModelNode] = None
                 add_node_nofile_fn: Callable
 
                 # If this is the latest version, it's allowed to define itself in a model file name that doesn't have a suffix
