@@ -39,6 +39,7 @@ from dbt.context.providers import (
     generate_parse_exposure,
     generate_parse_semantic_models,
 )
+from dbt.contracts.files import SchemaSourceFile
 from dbt.contracts.graph.nodes import Exposure, Group, Metric, SavedQuery, SemanticModel
 from dbt.contracts.graph.unparsed import (
     UnparsedConversionTypeParams,
@@ -141,6 +142,7 @@ class ExposureParser(YamlReader):
         get_rendered(depends_on_jinja, ctx, parsed, capture_macros=True)
         # parsed now has a populated refs/sources/metrics
 
+        assert isinstance(self.yaml.file, SchemaSourceFile)
         if parsed.config.enabled:
             self.manifest.add_exposure(self.yaml.file, parsed)
         else:
@@ -390,6 +392,7 @@ class MetricParser(YamlReader):
         )
 
         # if the metric is disabled we do not want it included in the manifest, only in the disabled dict
+        assert isinstance(self.yaml.file, SchemaSourceFile)
         if parsed.config.enabled:
             self.manifest.add_metric(self.yaml.file, parsed, generated)
         else:
@@ -451,6 +454,7 @@ class GroupParser(YamlReader):
             owner=unparsed.owner,
         )
 
+        assert isinstance(self.yaml.file, SchemaSourceFile)
         self.manifest.add_group(self.yaml.file, parsed)
 
     def parse(self):
@@ -643,6 +647,7 @@ class SemanticModelParser(YamlReader):
 
         # if the semantic model is disabled we do not want it included in the manifest,
         # only in the disabled dict
+        assert isinstance(self.yaml.file, SchemaSourceFile)
         if parsed.config.enabled:
             self.manifest.add_semantic_model(self.yaml.file, parsed)
         else:
@@ -779,6 +784,7 @@ class SavedQueryParser(YamlReader):
             delattr(export, "relation_name")
 
         # Only add thes saved query if it's enabled, otherwise we track it with other diabled nodes
+        assert isinstance(self.yaml.file, SchemaSourceFile)
         if parsed.config.enabled:
             self.manifest.add_saved_query(self.yaml.file, parsed)
         else:
