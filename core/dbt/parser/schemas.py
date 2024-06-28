@@ -519,7 +519,7 @@ class PatchParser(YamlReader, Generic[NonSourceTarget, Parsed]):
 
     # We want to raise an error if some attributes are in two places, and move them
     # from toplevel to config if necessary
-    def normalize_attribute(self, data, path, attribute):
+    def normalize_attribute(self, data, path, attribute) -> None:
         if attribute in data:
             if "config" in data and attribute in data["config"]:
                 raise ParsingError(
@@ -533,19 +533,19 @@ class PatchParser(YamlReader, Generic[NonSourceTarget, Parsed]):
                     data["config"] = {}
                 data["config"][attribute] = data.pop(attribute)
 
-    def normalize_meta_attribute(self, data, path):
+    def normalize_meta_attribute(self, data, path) -> None:
         return self.normalize_attribute(data, path, "meta")
 
-    def normalize_docs_attribute(self, data, path):
+    def normalize_docs_attribute(self, data, path) -> None:
         return self.normalize_attribute(data, path, "docs")
 
-    def normalize_group_attribute(self, data, path):
+    def normalize_group_attribute(self, data, path) -> None:
         return self.normalize_attribute(data, path, "group")
 
-    def normalize_contract_attribute(self, data, path):
+    def normalize_contract_attribute(self, data, path) -> None:
         return self.normalize_attribute(data, path, "contract")
 
-    def normalize_access_attribute(self, data, path):
+    def normalize_access_attribute(self, data, path) -> None:
         return self.normalize_attribute(data, path, "access")
 
     @property
@@ -717,7 +717,7 @@ class NodePatchParser(PatchParser[NodeTarget, ParsedNodePatch], Generic[NodeTarg
 
             self.patch_node_properties(node, patch)
 
-    def patch_node_properties(self, node, patch: "ParsedNodePatch"):
+    def patch_node_properties(self, node, patch: "ParsedNodePatch") -> None:
         """Given a ParsedNodePatch, add the new information to the node."""
         # explicitly pick out the parts to update so we don't inadvertently
         # step on the model name or anything
@@ -896,7 +896,7 @@ class ModelPatchParser(NodePatchParser[UnparsedModelUpdate]):
     def _target_type(self) -> Type[UnparsedModelUpdate]:
         return UnparsedModelUpdate
 
-    def patch_node_properties(self, node, patch: "ParsedNodePatch"):
+    def patch_node_properties(self, node, patch: "ParsedNodePatch") -> None:
         super().patch_node_properties(node, patch)
         node.version = patch.version
         node.latest_version = patch.latest_version
@@ -913,7 +913,7 @@ class ModelPatchParser(NodePatchParser[UnparsedModelUpdate]):
         self.patch_constraints(node, patch.constraints)
         node.build_contract_checksum()
 
-    def patch_constraints(self, node, constraints):
+    def patch_constraints(self, node, constraints) -> None:
         contract_config = node.config.get("contract")
         if contract_config.enforced is True:
             self._validate_constraint_prerequisites(node)
@@ -929,7 +929,9 @@ class ModelPatchParser(NodePatchParser[UnparsedModelUpdate]):
         self._validate_pk_constraints(node, constraints)
         node.constraints = [ModelLevelConstraint.from_dict(c) for c in constraints]
 
-    def _validate_pk_constraints(self, model_node: ModelNode, constraints: List[Dict[str, Any]]):
+    def _validate_pk_constraints(
+        self, model_node: ModelNode, constraints: List[Dict[str, Any]]
+    ) -> None:
         errors = []
         # check for primary key constraints defined at the column level
         pk_col: List[str] = []
@@ -962,7 +964,7 @@ class ModelPatchParser(NodePatchParser[UnparsedModelUpdate]):
                 + "\n".join(errors)
             )
 
-    def _validate_constraint_prerequisites(self, model_node: ModelNode):
+    def _validate_constraint_prerequisites(self, model_node: ModelNode) -> None:
         column_warn_unsupported = [
             constraint.warn_unsupported
             for column in model_node.columns.values()
