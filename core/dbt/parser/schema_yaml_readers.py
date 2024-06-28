@@ -84,7 +84,7 @@ class ExposureParser(YamlReader):
         self.schema_parser = schema_parser
         self.yaml = yaml
 
-    def parse_exposure(self, unparsed: UnparsedExposure):
+    def parse_exposure(self, unparsed: UnparsedExposure) -> None:
         package_name = self.project.project_name
         unique_id = f"{NodeType.Exposure}.{package_name}.{unparsed.name}"
         path = self.yaml.path.relative_path
@@ -171,7 +171,7 @@ class ExposureParser(YamlReader):
             patch_config_dict=precedence_configs,
         )
 
-    def parse(self):
+    def parse(self) -> None:
         for data in self.get_key_dicts():
             try:
                 UnparsedExposure.validate(data)
@@ -337,7 +337,7 @@ class MetricParser(YamlReader):
             # input_measures=?,
         )
 
-    def parse_metric(self, unparsed: UnparsedMetric, generated: bool = False):
+    def parse_metric(self, unparsed: UnparsedMetric, generated: bool = False) -> None:
         package_name = self.project.project_name
         unique_id = f"{NodeType.Metric}.{package_name}.{unparsed.name}"
         path = self.yaml.path.relative_path
@@ -422,7 +422,7 @@ class MetricParser(YamlReader):
         )
         return config
 
-    def parse(self):
+    def parse(self) -> None:
         for data in self.get_key_dicts():
             try:
                 UnparsedMetric.validate(data)
@@ -439,7 +439,7 @@ class GroupParser(YamlReader):
         self.schema_parser = schema_parser
         self.yaml = yaml
 
-    def parse_group(self, unparsed: UnparsedGroup):
+    def parse_group(self, unparsed: UnparsedGroup) -> None:
         package_name = self.project.project_name
         unique_id = f"{NodeType.Group}.{package_name}.{unparsed.name}"
         path = self.yaml.path.relative_path
@@ -587,7 +587,7 @@ class SemanticModelParser(YamlReader):
 
         return config
 
-    def parse_semantic_model(self, unparsed: UnparsedSemanticModel):
+    def parse_semantic_model(self, unparsed: UnparsedSemanticModel) -> None:
         package_name = self.project.project_name
         unique_id = f"{NodeType.SemanticModel}.{package_name}.{unparsed.name}"
         path = self.yaml.path.relative_path
@@ -658,7 +658,7 @@ class SemanticModelParser(YamlReader):
             if measure.create_metric is True:
                 self._create_metric(measure=measure, enabled=parsed.config.enabled)
 
-    def parse(self):
+    def parse(self) -> None:
         for data in self.get_key_dicts():
             try:
                 UnparsedSemanticModel.validate(data)

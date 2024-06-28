@@ -362,7 +362,7 @@ class YamlReader(metaclass=ABCMeta):
         return dct
 
     @abstractmethod
-    def parse(self) -> ParseResult:
+    def parse(self) -> Optional[ParseResult]:
         raise NotImplementedError("parse is abstract")
 
 
